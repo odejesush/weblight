@@ -16,7 +16,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <title>WebLight</title>
 
-    <base href="/weblight/">
+    <!-- <base href="/weblight/"> -->
 
     <link rel="manifest" href="manifest.json">
 
@@ -26,12 +26,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <script>
       // Register the base URL
-      const baseUrl = document.querySelector('base').href;
+      // const baseUrl = document.querySelector('base').href;
 
       // Load and register pre-caching Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register(baseUrl + 'service-worker.js');
+          navigator.serviceWorker.register('service-worker.js');
         });
       }
     </script>
