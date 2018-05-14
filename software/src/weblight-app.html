@@ -40,59 +40,62 @@
             <a href="https://github.com/sowbug/weblight/">WebLight</a>
           </p>
           <p>
-            Don't see your device below? Grant this site permission to access
-            it by clicking the "+" button in the toolbar.
+            Don't see your device below? Grant this site permission to access it
+            by clicking the "+" button in the toolbar.
           </p>
         </div>
       </paper-card>
 
-      <template is="dom-repeat" items="{{devices}}">
-        <weblight-card device=[[item]]></weblight-card>
+      <template is="dom-repeat" items="{{serialNumbers}}">
+        <weblight-card serialnumber=[[item]]></weblight-card>
       </template>
     </div>
   </template>
 
   <script>
-    async function connectDevice(device) {
-      await device.open();
-      if (device.configuration === null)
-        await device.selectConfiguration(1);
-      await device.claimInterface(0);
-    }
-
     class MyApp extends Polymer.Element {
       static get is() { return 'weblight-app'; }
 
       async connectedCallback() {
         super.connectedCallback();
 
-        navigator.usb.addEventListener('connect', (event) => {
-          this.push('devices', event.device);
-          connectDevice(event.device);
-        });
+        this.worker = new Worker('/src/worker.js');
+        this.serialNumbers = new Array();
+        this.worker.onmessage = event => {
+          switch (event.data.type) {
+            case 'device opened':
+              this.push('serialNumbers', event.data.serialNumber);
+              break;
+            case 'disconnect':
+              let index = this.serialNumbers.indexOf(event.data.serialNumber);
+              if (index < 0) return;
+              this.splice('serialNumbers', index, 1);
+              break;
+          }
+        }
 
-        navigator.usb.addEventListener('disconnect', (event) => {
-          let index = this.devices.indexOf(event.device);
-          this.splice('devices', index, 1);
-        });
+        this.addEventListener('setDeviceColor', event => {
+          this.worker.postMessage({
+            type: 'setDeviceColor',
+            serialNumber: event.detail.serialNumber,
+            r: event.detail.r,
+            g: event.detail.g,
+            b: event.detail.b,
+          });
+        })
 
-        navigator.usb.getDevices().then((devices) => {
-          this.devices = devices;
-          devices.forEach(connectDevice);
-        });
+        this.worker.postMessage({ type: 'connectDevices' });
       }
 
       async addLight() {
         const filters = [
-          {vendorId: 0x1209, productId: 0xa800},
+          { vendorId: 0x1209, productId: 0xa800 },
         ];
         try {
-          let device = await navigator.usb.requestDevice({filters: filters});
-          let index = this.devices.indexOf(device);
-          if (index === -1) {
-            this.push('devices', device);
-            connectDevice(device);
-          }
+          let device = await navigator.usb.requestDevice({ filters: filters });
+          this.worker.postMessage({
+            type: 'connectDevice', serialNumber: device.serialNumber,
+          });
         } catch (error) {
           // Ignore "no device selected" error.
         }
