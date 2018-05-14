@@ -12,9 +12,10 @@
       }
     </style>
 
-    <paper-card heading="{{device.serialNumber}}">
+    <paper-card heading="{{serialnumber}}">
       <div class="card-content">
-        Pick a color: <input id="lightPicker" type="color" on-change="lightCustom">
+        Pick a color:
+        <input id="lightPicker" type="color" on-change="lightCustom">
       </div>
       <div class="card-actions">
         <paper-button on-tap="lightRed">Red</paper-button>
@@ -49,28 +50,17 @@
       static get is() { return 'weblight-card'; }
 
       async setDeviceColor(r, g, b) {
-        if (this.device.opened) {
-          let payload;
-
-          if (this.device.usbVersionMajor === 2) {
-            payload = new Uint8Array([0xFF, r, g, b])
-          } else if (this.device.usbVersionMajor === 1) {
-            payload = new Uint8Array([r, g, b]);
-          }
-
-          if (payload == null) {
-            throw new Error(`Unknown device firmware version ${this.device.usbVersionMajor}`);
-          }
-
-          await this.device.controlTransferOut({
-            requestType: 'vendor',
-            recipient: 'device',
-            request: 1,
-            value: 0,
-            index: 0,
-          }, payload);
-          this.$.lightPicker.value = rgbToHex(r, g, b);
-        }
+        this.dispatchEvent(new CustomEvent(
+          'setDeviceColor',
+          {
+            detail: {
+              serialNumber: this.serialnumber, r: r, g: g, b: b,
+            },
+            bubbles: true,
+            composed: true,
+          }));
+        this.$.lightPicker.value = rgbToHex(r, g, b);
+        // }
       }
 
       lightRed() {
